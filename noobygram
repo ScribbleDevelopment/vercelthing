@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Noobgram Development Console</title>
+    <style>
+        :root {
+            --bg-base: #f4f5f7;
+            --surface: #ffffff;
+            --border: #d0d7de;
+            --text-primary: #1f2328;
+            --text-secondary: #656d76;
+            --header-bg: #f6f8fa;
+            --btn-bg: #f6f8fa;
+            --btn-border: #d0d7de;
+            --btn-text: #24292f;
+            --btn-hover: #f3f4f6;
+            --gutter-bg: #f6f8fa;
+            --gutter-text: #8c959f;
+            --console-text: #1f2328;
+            --console-muted: #656d76;
+            --input-bg: #ffffff;
+            --focus-ring: #0969da;
+        }
+
+        [data-theme="dark"] {
+            --bg-base: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #848d97;
+            --header-bg: #161b22;
+            --btn-bg: #21262d;
+            --btn-border: #30363d;
+            --btn-text: #e6edf3;
+            --btn-hover: #30363d;
+            --gutter-bg: #161b22;
+            --gutter-text: #6e7681;
+            --console-text: #e6edf3;
+            --console-muted: #848d97;
+            --input-bg: #0d1117;
+            --focus-ring: #1f6feb;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        code, .line-number, .line-content, input[type="text"], .prompt-symbol {
+            font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .console-window {
+            width: 100%;
+            max-width: 1200px;
+            height: 100%;
+            max-height: 800px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .console-header {
+            background: var(--header-bg);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-title span {
+            color: var(--text-primary);
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button {
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--btn-border);
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        button:hover {
+            background: var(--btn-hover);
+        }
+
+        button:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: -1px;
+        }
+
+        .console-body {
+            flex: 1;
+            position: relative;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .output-stream {
+            padding: 12px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .log-row {
+            display: flex;
+            width: 100%;
+            line-height: 1.5;
+            font-size: 13px;
+        }
+
+        .line-number {
+            width: 56px;
+            padding-right: 16px;
+            text-align: right;
+            color: var(--gutter-text);
+            background: var(--gutter-bg);
+            user-select: none;
+            flex-shrink: 0;
+            font-size: 12px;
+            line-height: 1.5;
+            border-right: 1px solid var(--border);
+        }
+
+        .line-content {
+            padding-left: 16px;
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-out { color: var(--console-text); }
+        .log-err { color: var(--console-muted); }
+        .log-sys { color: var(--console-muted); }
+        .log-val { color: var(--console-text); }
+
+        .input-container {
+            display: flex;
+            background: var(--input-bg);
+            border-top: 1px solid var(--border);
+            align-items: center;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding-left: 16px;
+        }
+
+        .prompt-symbol {
+            color: var(--text-secondary);
+            margin-right: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+            height: 42px;
+            width: 100%;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 0; }
+            .console-window { border: none; border-radius: 0; max-height: 100dvh; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="console-window">
+    <div class="console-header">
+        <div class="header-title">
+            Environment: <span>Noobgram Runtime v1.0.0</span>
+        </div>
+        <div class="toolbar-group">
+            <button onclick="executeCurrentInput()">Run Code</button>
+            <button onclick="clearTerminal()">Clear Console</button>
+            <button onclick="toggleTheme()" id="themeBtn">Light Theme</button>
+        </div>
+    </div>
+    
+    <div class="console-body" id="consoleBody">
+        <div class="output-stream" id="outputStream"></div>
+    </div>
+    
+    <div class="input-container">
+        <div class="input-wrapper">
+            <span class="prompt-symbol">&gt;&gt;&gt;</span>
+            <input type="text" id="termInput" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Enter command...">
+        </div>
+    </div>
+</div>
+
+<script>
+    const outputStream = document.getElementById('outputStream');
+    const consoleBody = document.getElementById('consoleBody');
+    const input = document.getElementById('termInput');
+    const themeBtn = document.getElementById('themeBtn');
+
+    let lineCount = 0;
+    let bigBrain = {};
+    let unlockedFeatures = {
+        "printing": false,
+        "variables": false,
+        "addition": false,
+        "multiplication": false,
+        "subtraction": false,
+        "division": false,
+        "loops": false,
+        "random": false,
+        "browser": false
+    };
+
+    let history = [];
+    let historyIndex = -1;
+
+    function addRow(text, type = 'out') {
+        lineCount++;
+
+        const row = document.createElement('div');
+        row.className = 'log-row';
+
+        const numDiv = document.createElement('div');
+        numDiv.className = 'line-number';
+        numDiv.textContent = lineCount;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = `line-content log-${type}`;
+        contentDiv.textContent = text;
+
+        row.appendChild(numDiv);
+        row.appendChild(contentDiv);
+        outputStream.appendChild(row);
+
+        consoleBody.scrollTop = consoleBody.scrollHeight;
+    }
+
+    addRow("Noobgram Runtime Environment Initialized.", "sys");
+    addRow("Documentation reference: https://github.com", "sys");
+    addRow("Type 'nooby you are so tengo (:' for administrative override", "sys");
+    addRow("Feature request syntax: nooby pls add [feature] i beg T_T", "sys");
+
+    function clearTerminal() {
+        outputStream.innerHTML = '';
+        lineCount = 0;
+    }
+
+    function toggleTheme() {
+        const html = document.documentElement;
+        if (html.getAttribute('data-theme') === 'dark') {
+            html.setAttribute('data-theme', 'light');
+            themeBtn.textContent = 'Dark Theme';
+        } else {
+            html.setAttribute('data-theme', 'dark');
+            themeBtn.textContent = 'Light Theme';
+        }
+    }
+
+    function parseLine(line) {
+        line = line.trim();
+        
+        if (line.startsWith("hey bro btw")) {
+            return;
+        }
+
+        if (!line.includes("yo to the yo tengo")) {
+            addRow(`Syntax Error: Expected termination token 'yo to the yo tengo' on expression (${line})`, 'err');
+            return;
+        }
+        
+        line = line.replace("yo to the yo tengo", "").trim();
+        
+        if (!line || line.startsWith('#')) {
+            addRow("yo to the yo tengo", 'out');
+            return;
+        }
+
+        let siteMatch = line.match(/^gimme da site "([^"]+)"$/);
+        if (siteMatch) {
+            if (!unlockedFeatures["browser"]) {
+                addRow("Runtime Error: Module 'browser' is restricted. Request access from administrator.", 'err');
+                return;
+            }
+            let url = siteMatch[1];
+            if (!url.startswith("http")) {
+                url = "https://" + url;
+            }
+            addRow("Browser subsystem initialized.", "sys");
+            addRow(`Target URI: ${url}`, "val");
+            addRow("yo to the yo tengo", "out");
+            return;
+        }
+
+        let varMatch = line.match(/^store this in me big brain (\w+) (.+)$/);
+        if (varMatch) {
+            if (!unlockedFeatures["variables"]) {
+                addRow("Runtime Error: Module 'variables' is restricted. Request access from administrator.", 'err');
+                return;
+            }
+            
+            let varName = varMatch[1];
+            let valExpr = varMatch[2].trim();
+            
+            if (valExpr.includes("choose one") && valExpr.includes("thru")) {
+                if (!unlockedFeatures["random"]) {
+                    addRow("Runtime Error: Module 'random' is restricted. Request access from administrator.", 'err');
+                    return;
+                }
+                let randMatch = valExpr.match(/^choose one (\d+) thru (\d+)$/);
+                if (randMatch) {
+                    let low = parseInt(randMatch[1]);
+                    let high = parseInt(randMatch[2]);
+                    bigBrain[varName] = Math.floor(Math.random() * (high - low + 1)) + low;
+                    addRow("yo to the yo tengo", "out");
+                    return;
+                }
+            }
+            
+            if (valExpr.includes("plus da dis number")) {
+                if (!unlockedFeatures["addition"]) {
+                    addRow("Runtime Error: Module 'addition' is restricted. Request access from administrator.", 'err');
+                    return;
+                }
+                let parts = valExpr.split("plus da dis number");
+                let p1 = parts[0].trim(), p2 = parts[1].trim();
+                let v1 = bigBrain[p1] !== undefined ? bigBrain[p1] : (isNaN(p1) ? p1 : Number(p1));
+                let v2 = bigBrain[p2] !== undefined ? bigBrain[p2] : (isNaN(p2) ? p2 : Number(p2));
+                bigBrain[varName] = Number(v1) + Number(v2);
+                addRow("yo to the yo tengo", "out");
+                return;
+            }
+            else if (valExpr.includes("timez da dis number")) {
+                if (!unlockedFeatures["multiplication"]) {
+                    addRow("Runtime Error: Module 'multiplication' is restricted. Request access from administrator.", 'err');
+                    return;
+                }
+                let parts = valExpr.split("timez da dis number");
+                let p1 = parts[0].trim(), p2 = parts[1].trim();
+                let v1 = bigBrain[p1] !== undefined ? bigBrain[p1] : (isNaN(p1) ? p1 : Number(p1));
+                let v2 = bigBrain[p2] !== undefined ? bigBrain[p2] : (isNaN(p2) ? p2 : Number(p2));
+                bigBrain[varName] = Number(v1) * Number(v2);
+                addRow("yo to the yo tengo", "out");
+                return;
+            }
+            else if (valExpr.includes("minus da dis number")) {
+                if (!unlockedFeatures["subtraction"]) {
+                    addRow("Runtime Error: Module 'subtraction' is restricted. Request access from administrator.", 'err');
+                    return;
+                }
+                let parts = valExpr.split("minus da dis number");
+                let p1 = parts[0].trim(), p2 = parts[1].trim();
+                let v1 = bigBrain[p1] !== undefined ? bigBrain[p1] : (isNaN(p1) ? p1 : Number(p1));
+                let v2 = bigBrain[p2] !== undefined ? bigBrain[p2] : (isNaN(p2) ? p2 : Number(p2));
+                bigBrain[varName] = Number(v1) - Number(v2);
+                addRow("yo to the yo tengo", "out");
+                return;
+            }
+            else if (valExpr.includes("divide da dis number")) {
+                if (!unlockedFeatures["division"]) {
+                    addRow("Runtime Error: Module 'division' is restricted. Request access from administrator.", 'err');
+                    return;
+                }
+                let parts = valExpr.split("divide da dis number");
+                let p1 = parts[0].trim(), p2 = parts[1].trim();
+                let v1 = bigBrain[p1] !== undefined ? bigBrain[p1] : (isNaN(p1) ? p1 : Number(p1));
+                let v2 = bigBrain[p2] !== undefined ? bigBrain[p2] : (isNaN(p2) ? p2 : Number(p2));
+                bigBrain[varName] = v2 !== 0 ? Math.floor(Number(v1) / Number(v2)) : 0;
+                addRow("yo to the yo tengo", "out");
+                return;
+            }
+            else {
+                bigBrain[varName] = isNaN(valExpr) ? valExpr.replace(/^"|"$/g, '') : Number(valExpr);
+                addRow("yo to the yo tengo", "out");
+                return;
+            }
+        }
+
+        let printMatch = line.match(/^hello world\("(.+)"\)$/);
+        if (printMatch) {
+            if (!unlockedFeatures["printing"]) {
+                addRow("Runtime Error: Module 'printing' is restricted. Request access from administrator.", 'err');
+                return;
+            }
+            let content = printMatch[1];
+            addRow(bigBrain[content] !== undefined ? bigBrain[content] : content, 'out');
+            addRow("yo to the yo tengo", 'out');
+            return;
+        }
+
+        let loopMatch = line.match(/^do dis lot (\d+) (.+) stawp \):\s*$/);
+        if (loopMatch) {
+            if (!unlockedFeatures["loops"]) {
+                addRow("Runtime Error: Module 'loops' is restricted. Request access from administrator.", 'err');
+                return;
+            }
+            let times = parseInt(loopMatch[1]);
+            let innerCommand = loopMatch[2].trim();
+            
+            for (let i = 0; i < times; i++) {
+                if (innerCommand.startsWith("hello world")) {
+                    let cMatch = innerCommand.match(/^hello world\("(.+)"\)$/);
+                    if (cMatch) {
+                        let content = cMatch[1];
+                        addRow(bigBrain[content] !== undefined ? bigBrain[content] : content, 'out');
+                    }
+                }
+            }
+            addRow("yo to the yo tengo", 'out');
+            return;
+        }
+
+        addRow(`Syntax Error: Unrecognized expression token sequence (${line})`, 'err');
+    }
+
+    function executeCurrentInput() {
+        let userInput = input.value.trim();
+        if (!userInput) return;
+
+        history.push(userInput);
+        historyIndex = history.length;
+
+        addRow(`>>> ${userInput}`, 'sys');
+        input.value = '';
+
+        if (userInput === "nooby you are so tengo (:") {
+            for (let f in unlockedFeatures) {
+                unlockedFeatures[f] = true;
+            }
+            addRow("Administrative override successful. All system modules unlocked.", 'sys');
+            return;
+        }
+
+        if (userInput.startsWith("nooby pls add") && userInput.endsWith("i beg T_T")) {
+            let begRequest = userInput.replace("nooby pls add", "").replace("i beg T_T", "").trim().toLowerCase();
+            
+            if (begRequest.includes("print") || begRequest.includes("hello")) {
+                unlockedFeatures["printing"] = true;
+                addRow("Module loaded: printing", 'sys');
+            } else if (begRequest.includes("variable") || begRequest.includes("brain")) {
+                unlockedFeatures["variables"] = true;
+                addRow("Module loaded: variables", 'sys');
+            } else if (begRequest.includes("add") || begRequest.includes("plus")) {
+                unlockedFeatures["addition"] = true;
+                addRow("Module loaded: addition", 'sys');
+            } else if (begRequest.includes("sub") || begRequest.includes("minus")) {
+                unlockedFeatures["subtraction"] = true;
+                addRow("Module loaded: subtraction", 'sys');
+            } else if (begRequest.includes("multi") || begRequest.includes("timez")) {
+                unlockedFeatures["multiplication"] = true;
+                addRow("Module loaded: multiplication", 'sys');
+            } else if (begRequest.includes("divi") || begRequest.includes("divide")) {
+                unlockedFeatures["division"] = true;
+                addRow("Module loaded: division", 'sys');
+            } else if (begRequest.includes("loop") || begRequest.includes("lot")) {
+                unlockedFeatures["loops"] = true;
+                addRow("Module loaded: loops", 'sys');
+            } else if (begRequest.includes("rand") || begRequest.includes("choose")) {
+                unlockedFeatures["random"] = true;
+                addRow("Module loaded: random", 'sys');
+            } else if (begRequest.includes("browser") || begRequest.includes("site")) {
+                unlockedFeatures["browser"] = true;
+                addRow("Module loaded: browser", 'sys');
+            } else {
+                addRow("Error: Invalid module identifier specified.", 'err');
+            }
+            return;
+        }
+
+        parseLine(userInput);
+    }
+
+    input.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            executeCurrentInput();
+        } else if (event.key === 'ArrowUp') {
+            if (history.length > 0 && historyIndex > 0) {
+                historyIndex--;
+                input.value = history[historyIndex];
+            }
+            event.preventDefault();
+        } else if (event.key === 'ArrowDown') {
+            if (history.length > 0 && historyIndex < history.length - 1) {
+                historyIndex++;
+                input.value = history[historyIndex];
+            } else {
+                historyIndex = history.length;
+                input.value = '';
+            }
+            event.preventDefault();
+        }
+    });
+</script>
+
+</body>
+</html>
